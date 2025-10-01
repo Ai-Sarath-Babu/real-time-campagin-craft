@@ -14,6 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_stats: {
+        Row: {
+          campaign_id: string
+          clicks: number | null
+          conversions: number | null
+          date: string
+          id: string
+          pageviews: number | null
+          unique_visitors: number | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          clicks?: number | null
+          conversions?: number | null
+          date: string
+          id?: string
+          pageviews?: number | null
+          unique_visitors?: number | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          clicks?: number | null
+          conversions?: number | null
+          date?: string
+          id?: string
+          pageviews?: number | null
+          unique_visitors?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_stats_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          custom_params: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+          url: string
+          user_id: string
+          utm_campaign: string
+          utm_content: string | null
+          utm_id: string | null
+          utm_medium: string
+          utm_source: string
+          utm_term: string | null
+        }
+        Insert: {
+          created_at?: string
+          custom_params?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+          url: string
+          user_id: string
+          utm_campaign: string
+          utm_content?: string | null
+          utm_id?: string | null
+          utm_medium: string
+          utm_source: string
+          utm_term?: string | null
+        }
+        Update: {
+          created_at?: string
+          custom_params?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+          utm_campaign?: string
+          utm_content?: string | null
+          utm_id?: string | null
+          utm_medium?: string
+          utm_source?: string
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           created_at: string | null
@@ -140,6 +232,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      tracking_events: {
+        Row: {
+          browser: string | null
+          campaign_id: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          event_type: string
+          id: string
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          browser?: string | null
+          campaign_id?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_type: string
+          id?: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          browser?: string | null
+          campaign_id?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_type?: string
+          id?: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
