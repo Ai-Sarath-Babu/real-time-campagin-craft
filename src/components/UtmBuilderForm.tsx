@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check, Link2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { campaignSchema } from "@/lib/validations";
+import { z } from "zod";
 
 export const UtmBuilderForm = () => {
   const { toast } = useToast();
@@ -60,17 +62,30 @@ export const UtmBuilderForm = () => {
         return;
       }
 
-      const { error } = await supabase.from("campaigns").insert({
-        user_id: user.id,
+      // Validate input
+      const validated = campaignSchema.parse({
         name: formData.name || `${formData.source} - ${formData.campaign}`,
         url: formData.url,
         utm_source: formData.source,
         utm_medium: formData.medium,
         utm_campaign: formData.campaign,
-        utm_term: formData.term || null,
-        utm_content: formData.content || null,
-        utm_id: formData.id || null,
-        custom_params: formData.custom ? { custom_param: formData.custom } : {},
+        utm_term: formData.term,
+        utm_content: formData.content,
+        utm_id: formData.id,
+        custom: formData.custom,
+      });
+
+      const { error } = await supabase.from("campaigns").insert({
+        user_id: user.id,
+        name: validated.name,
+        url: validated.url,
+        utm_source: validated.utm_source,
+        utm_medium: validated.utm_medium,
+        utm_campaign: validated.utm_campaign,
+        utm_term: validated.utm_term || null,
+        utm_content: validated.utm_content || null,
+        utm_id: validated.utm_id || null,
+        custom_params: validated.custom ? { custom_param: validated.custom } : {},
       });
 
       if (error) throw error;
@@ -93,11 +108,19 @@ export const UtmBuilderForm = () => {
         custom: "",
       });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setSaving(false);
     }

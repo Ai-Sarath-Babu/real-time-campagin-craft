@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Validation schema
+const trackingEventSchema = z.object({
+  campaign_id: z.string().uuid().optional(),
+  event_type: z.enum(['click', 'pageview', 'conversion']),
+  referrer: z.string().trim().max(2048).optional(),
+  utm_source: z.string().trim().max(255).optional(),
+  utm_medium: z.string().trim().max(255).optional(),
+  utm_campaign: z.string().trim().max(255).optional(),
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -17,14 +28,29 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const body = await req.json();
+    
+    // Validate input
+    const validationResult = trackingEventSchema.safeParse(body);
+    if (!validationResult.success) {
+      console.error('Validation failed:', validationResult.error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: validationResult.error.errors 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const { 
       campaign_id, 
-      event_type = 'click',
+      event_type,
       referrer,
       utm_source,
       utm_medium,
       utm_campaign
-    } = await req.json();
+    } = validationResult.data;
 
     console.log('Received tracking event:', { 
       campaign_id, 

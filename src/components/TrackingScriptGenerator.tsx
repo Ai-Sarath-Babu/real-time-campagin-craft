@@ -16,10 +16,13 @@ export const TrackingScriptGenerator = ({ campaignId, campaignName }: TrackingSc
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
+  // Escape campaign ID to prevent XSS
+  const escapedCampaignId = campaignId.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
   const trackingScript = `<!-- Campaign Craft Tracking -->
 <script>
 (function() {
-  const campaignId = '${campaignId}';
+  const campaignId = '${escapedCampaignId}';
   const trackingUrl = 'https://azolpholrzdashejgcdl.supabase.co/functions/v1/track-event';
   
   // Track page view
