@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { BarChart3, LogOut, TestTube } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { BarChart3, LogOut, TestTube, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const Navigation = () => {
@@ -27,6 +27,12 @@ export const Navigation = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/privacy" className="gap-2">
+                <Shield className="w-4 h-4" />
+                Privacy
+              </Link>
+            </Button>
             <Button 
               variant="outline" 
               onClick={() => navigate("/test-tracking")}

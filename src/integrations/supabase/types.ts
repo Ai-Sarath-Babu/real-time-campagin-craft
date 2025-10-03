@@ -106,109 +106,6 @@ export type Database = {
         }
         Relationships: []
       }
-      chat_messages: {
-        Row: {
-          created_at: string | null
-          id: string
-          meeting_id: string
-          message: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          meeting_id: string
-          message: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          meeting_id?: string
-          message?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      meeting_participants: {
-        Row: {
-          id: string
-          is_present: boolean | null
-          joined_at: string | null
-          left_at: string | null
-          meeting_id: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          is_present?: boolean | null
-          joined_at?: string | null
-          left_at?: string | null
-          meeting_id: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          is_present?: boolean | null
-          joined_at?: string | null
-          left_at?: string | null
-          meeting_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "meeting_participants_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      meetings: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          host_id: string
-          id: string
-          is_active: boolean | null
-          max_participants: number | null
-          meeting_id: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          host_id: string
-          id?: string
-          is_active?: boolean | null
-          max_participants?: number | null
-          meeting_id: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          host_id?: string
-          id?: string
-          is_active?: boolean | null
-          max_participants?: number | null
-          meeting_id?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -306,10 +203,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_meeting_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

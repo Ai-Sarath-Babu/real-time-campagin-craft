@@ -22,6 +22,49 @@ const trackingEventSchema = z.object({
   screen_recording_url: z.string().trim().max(2048).optional(),
 });
 
+// Rate limiting: Max 100 events per IP per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 100;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return false;
+  }
+  
+  entry.count++;
+  return true;
+}
+
+// Sanitize page path to remove query parameters and fragments
+function sanitizePagePath(path: string | undefined): string | null {
+  if (!path) return null;
+  try {
+    const url = new URL(path, 'https://example.com');
+    return url.pathname.substring(0, 500);
+  } catch {
+    return path.split('?')[0].split('#')[0].substring(0, 500);
+  }
+}
+
+// Sanitize element text to prevent PII leakage
+function sanitizeElementText(text: string | undefined): string | null {
+  if (!text) return null;
+  // Remove emails, phone numbers, and truncate
+  return text
+    .replace(/[\w.-]+@[\w.-]+\.\w+/g, '[email]')
+    .replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[phone]')
+    .substring(0, 200);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -32,6 +75,21 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Extract client IP from various headers
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+                     req.headers.get('x-real-ip') ||
+                     req.headers.get('cf-connecting-ip') ||
+                     'unknown';
+    
+    // Rate limiting check
+    if (!checkRateLimit(clientIp)) {
+      console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const body = await req.json();
     
@@ -62,23 +120,14 @@ serve(async (req) => {
       screen_recording_url
     } = validationResult.data;
 
-    console.log('Received tracking event:', { 
-      campaign_id, 
+    console.log('Received tracking event from IP:', clientIp, {
       event_type, 
-      utm_source, 
-      utm_medium, 
-      utm_campaign,
       visitor_id,
       page_path
     });
 
-    // Get user agent and IP address
+    // Get user agent and parse device info
     const userAgent = req.headers.get('user-agent') || 'Unknown';
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
-                     req.headers.get('x-real-ip') || 
-                     'Unknown';
-
-    // Parse user agent for device/browser info
     const deviceType = userAgent.includes('Mobile') ? 'mobile' : 
                        userAgent.includes('Tablet') ? 'tablet' : 'desktop';
     
@@ -86,8 +135,9 @@ serve(async (req) => {
                     userAgent.includes('Firefox') ? 'Firefox' :
                     userAgent.includes('Safari') ? 'Safari' : 'Other';
 
-    // Generate a session ID (could be improved with actual session tracking)
-    const sessionId = crypto.randomUUID();
+    // Sanitize tracking data to prevent PII leakage
+    const sanitizedPagePath = sanitizePagePath(page_path);
+    const sanitizedElementText = sanitizeElementText(element_text);
 
     // Find campaign by ID or UTM parameters
     let finalCampaignId = campaign_id;
@@ -113,6 +163,9 @@ serve(async (req) => {
       );
     }
 
+    // Use visitor_id as session identifier (better than generating new UUID)
+    const sessionId = visitor_id || crypto.randomUUID();
+
     // Insert tracking event
     const { data, error } = await supabase
       .from('tracking_events')
@@ -126,9 +179,9 @@ serve(async (req) => {
         session_id: sessionId,
         ip_address: clientIp,
         visitor_id: visitor_id || sessionId,
-        page_path,
+        page_path: sanitizedPagePath,
         element_selector,
-        element_text,
+        element_text: sanitizedElementText,
         screen_recording_url,
       })
       .select()

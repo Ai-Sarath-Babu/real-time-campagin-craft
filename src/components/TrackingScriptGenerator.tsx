@@ -22,6 +22,12 @@ export const TrackingScriptGenerator = ({ campaignId, campaignName }: TrackingSc
   const trackingScript = `<!-- Campaign Craft Advanced Tracking -->
 <script>
 (function() {
+  // Respect Do Not Track browser setting
+  if (navigator.doNotTrack === '1' || window.doNotTrack === '1') {
+    console.log('[Campaign Craft] Do Not Track enabled, tracking disabled');
+    return;
+  }
+  
   const campaignId = '${escapedCampaignId}';
   const trackingUrl = 'https://azolpholrzdashejgcdl.supabase.co/functions/v1/track-event';
   
