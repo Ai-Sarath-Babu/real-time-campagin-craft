@@ -15,6 +15,11 @@ const trackingEventSchema = z.object({
   utm_source: z.string().trim().max(255).optional(),
   utm_medium: z.string().trim().max(255).optional(),
   utm_campaign: z.string().trim().max(255).optional(),
+  visitor_id: z.string().trim().max(255).optional(),
+  page_path: z.string().trim().max(2048).optional(),
+  element_selector: z.string().trim().max(500).optional(),
+  element_text: z.string().trim().max(500).optional(),
+  screen_recording_url: z.string().trim().max(2048).optional(),
 });
 
 serve(async (req) => {
@@ -49,7 +54,12 @@ serve(async (req) => {
       referrer,
       utm_source,
       utm_medium,
-      utm_campaign
+      utm_campaign,
+      visitor_id,
+      page_path,
+      element_selector,
+      element_text,
+      screen_recording_url
     } = validationResult.data;
 
     console.log('Received tracking event:', { 
@@ -57,12 +67,16 @@ serve(async (req) => {
       event_type, 
       utm_source, 
       utm_medium, 
-      utm_campaign 
+      utm_campaign,
+      visitor_id,
+      page_path
     });
 
-    // Get user agent and other request info
+    // Get user agent and IP address
     const userAgent = req.headers.get('user-agent') || 'Unknown';
-    const clientIp = req.headers.get('x-forwarded-for') || 'Unknown';
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'Unknown';
 
     // Parse user agent for device/browser info
     const deviceType = userAgent.includes('Mobile') ? 'mobile' : 
@@ -110,6 +124,12 @@ serve(async (req) => {
         device_type: deviceType,
         browser: browser,
         session_id: sessionId,
+        ip_address: clientIp,
+        visitor_id: visitor_id || sessionId,
+        page_path,
+        element_selector,
+        element_text,
+        screen_recording_url,
       })
       .select()
       .single();

@@ -19,42 +19,79 @@ export const TrackingScriptGenerator = ({ campaignId, campaignName }: TrackingSc
   // Escape campaign ID to prevent XSS
   const escapedCampaignId = campaignId.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  const trackingScript = `<!-- Campaign Craft Tracking -->
+  const trackingScript = `<!-- Campaign Craft Advanced Tracking -->
 <script>
 (function() {
   const campaignId = '${escapedCampaignId}';
   const trackingUrl = 'https://azolpholrzdashejgcdl.supabase.co/functions/v1/track-event';
   
-  // Track page view
-  function trackEvent(eventType) {
+  // Get or create unique visitor ID
+  function getVisitorId() {
+    let visitorId = localStorage.getItem('cc_visitor_id');
+    if (!visitorId) {
+      visitorId = 'v_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('cc_visitor_id', visitorId);
+    }
+    return visitorId;
+  }
+  
+  const visitorId = getVisitorId();
+  
+  // Track event with full context
+  function trackEvent(eventType, extraData = {}) {
+    const eventData = {
+      campaign_id: campaignId,
+      event_type: eventType,
+      referrer: document.referrer,
+      visitor_id: visitorId,
+      page_path: window.location.pathname + window.location.search,
+      timestamp: new Date().toISOString(),
+      ...extraData
+    };
+    
     fetch(trackingUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        campaign_id: campaignId,
-        event_type: eventType,
-        referrer: document.referrer,
-        timestamp: new Date().toISOString()
-      })
+      body: JSON.stringify(eventData)
     }).catch(err => console.error('Tracking error:', err));
   }
   
-  // Auto-track page view
+  // Auto-track page view on load
   trackEvent('pageview');
   
-  // Track clicks on elements with data-track="click"
+  // Track all button clicks
   document.addEventListener('click', function(e) {
-    if (e.target.closest('[data-track="click"]')) {
-      trackEvent('click');
+    const button = e.target.closest('button, a, [role="button"]');
+    if (button) {
+      const isConversion = button.hasAttribute('data-track-conversion') || 
+                          button.closest('[data-track="conversion"]');
+      const eventType = isConversion ? 'conversion' : 'click';
+      
+      trackEvent(eventType, {
+        element_selector: button.tagName + (button.id ? '#' + button.id : '') + 
+                         (button.className ? '.' + button.className.split(' ')[0] : ''),
+        element_text: button.textContent?.trim().substring(0, 100) || ''
+      });
     }
   });
   
-  // Track conversions on elements with data-track="conversion"
-  document.addEventListener('click', function(e) {
-    if (e.target.closest('[data-track="conversion"]')) {
-      trackEvent('conversion');
-    }
-  });
+  // Optional: Screen recording with rrweb (add rrweb library first)
+  if (window.rrweb && localStorage.getItem('cc_record_screen') === 'true') {
+    let events = [];
+    window.rrweb.record({
+      emit(event) {
+        events.push(event);
+        // Send recording data every 10 seconds
+        if (events.length > 50) {
+          const recordingData = JSON.stringify(events);
+          trackEvent('pageview', {
+            screen_recording_url: 'data:application/json;base64,' + btoa(recordingData)
+          });
+          events = [];
+        }
+      }
+    });
+  }
 })();
 </script>`;
 
@@ -97,12 +134,16 @@ export const TrackingScriptGenerator = ({ campaignId, campaignName }: TrackingSc
       </div>
 
       <div className="space-y-2 pt-2">
-        <Label>Usage Instructions</Label>
+        <Label>Advanced Features</Label>
         <div className="text-sm text-muted-foreground space-y-2">
-          <p>1. Copy the script above and paste it before the closing {'</body>'} tag</p>
-          <p>2. Add <code className="bg-muted px-1 rounded">data-track="click"</code> to buttons you want to track clicks</p>
-          <p>3. Add <code className="bg-muted px-1 rounded">data-track="conversion"</code> to conversion buttons</p>
-          <p>4. Page views are tracked automatically</p>
+          <p>✅ <strong>Auto-tracking:</strong> Page views tracked automatically</p>
+          <p>✅ <strong>All buttons:</strong> Clicks on all buttons, links, and clickable elements</p>
+          <p>✅ <strong>Unique visitors:</strong> Each visitor gets a persistent ID</p>
+          <p>✅ <strong>IP tracking:</strong> IP addresses captured server-side</p>
+          <p>✅ <strong>Page context:</strong> Full URL path and referrer tracked</p>
+          <p>✅ <strong>Element details:</strong> Button text and selectors captured</p>
+          <p>📝 <strong>Conversions:</strong> Add <code className="bg-muted px-1 rounded">data-track-conversion</code> to conversion buttons</p>
+          <p>🎥 <strong>Screen recording:</strong> Enable with localStorage: <code className="bg-muted px-1 rounded">cc_record_screen = true</code></p>
         </div>
       </div>
     </Card>

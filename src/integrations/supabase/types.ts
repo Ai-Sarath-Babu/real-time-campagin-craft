@@ -241,11 +241,17 @@ export type Database = {
           country: string | null
           created_at: string
           device_type: string | null
+          element_selector: string | null
+          element_text: string | null
           event_type: string
           id: string
+          ip_address: string | null
+          page_path: string | null
           referrer: string | null
+          screen_recording_url: string | null
           session_id: string | null
           user_agent: string | null
+          visitor_id: string | null
         }
         Insert: {
           browser?: string | null
@@ -254,11 +260,17 @@ export type Database = {
           country?: string | null
           created_at?: string
           device_type?: string | null
+          element_selector?: string | null
+          element_text?: string | null
           event_type: string
           id?: string
+          ip_address?: string | null
+          page_path?: string | null
           referrer?: string | null
+          screen_recording_url?: string | null
           session_id?: string | null
           user_agent?: string | null
+          visitor_id?: string | null
         }
         Update: {
           browser?: string | null
@@ -267,11 +279,17 @@ export type Database = {
           country?: string | null
           created_at?: string
           device_type?: string | null
+          element_selector?: string | null
+          element_text?: string | null
           event_type?: string
           id?: string
+          ip_address?: string | null
+          page_path?: string | null
           referrer?: string | null
+          screen_recording_url?: string | null
           session_id?: string | null
           user_agent?: string | null
+          visitor_id?: string | null
         }
         Relationships: [
           {

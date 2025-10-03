@@ -20,6 +20,10 @@ interface LiveEvent {
   event_type: string;
   campaign_id: string;
   created_at: string;
+  visitor_id?: string;
+  ip_address?: string;
+  page_path?: string;
+  element_text?: string;
   campaign: {
     name: string;
     utm_source: string;
@@ -70,10 +74,14 @@ export const LiveDashboardData = () => {
           event_type,
           campaign_id,
           created_at,
+          visitor_id,
+          ip_address,
+          page_path,
+          element_text,
           campaign:campaigns(name, utm_source)
         `)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) throw error;
       setLiveEvents(data || []);
@@ -242,35 +250,57 @@ export const LiveDashboardData = () => {
               No events yet. Events will appear here in real-time.
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
               {liveEvents.map((event) => (
                 <div
                   key={event.id}
-                  className="p-3 rounded-lg bg-muted/30 flex items-start gap-3 animate-fade-in"
+                  className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors animate-fade-in"
                 >
-                  <div className={`p-2 rounded-lg ${
-                    event.event_type === "conversion" ? "bg-success/10" : "bg-primary/10"
-                  }`}>
-                    {event.event_type === "conversion" ? (
-                      <Target className="w-4 h-4 text-success" />
-                    ) : (
-                      <MousePointer className="w-4 h-4 text-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium capitalize">{event.event_type}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground truncate">
-                        {event.campaign?.utm_source || "Unknown"}
-                      </span>
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      event.event_type === "conversion" ? "bg-success/10" : "bg-primary/10"
+                    }`}>
+                      {event.event_type === "conversion" ? (
+                        <Target className="w-4 h-4 text-success" />
+                      ) : (
+                        <MousePointer className="w-4 h-4 text-primary" />
+                      )}
                     </div>
-                    <div className="text-sm text-muted-foreground truncate">
-                      {event.campaign?.name || "Unknown Campaign"}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium capitalize">{event.event_type}</span>
+                        {event.visitor_id && (
+                          <Badge variant="outline" className="text-xs">
+                            ID: {event.visitor_id.substring(0, 10)}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-sm text-muted-foreground truncate">
+                          {event.campaign?.utm_source || "Unknown"}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground truncate">
+                        {event.campaign?.name || "Unknown Campaign"}
+                      </div>
+                      {event.page_path && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          📄 {event.page_path}
+                        </div>
+                      )}
+                      {event.element_text && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          🖱️ "{event.element_text}"
+                        </div>
+                      )}
+                      {event.ip_address && event.ip_address !== 'Unknown' && (
+                        <div className="text-xs text-muted-foreground">
+                          🌍 {event.ip_address}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {formatTimeAgo(event.created_at)}
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatTimeAgo(event.created_at)}
+                    </div>
                   </div>
                 </div>
               ))}
