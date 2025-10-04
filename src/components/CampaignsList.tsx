@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Trash2, ExternalLink, BarChart, Code } from "lucide-react";
 import { TrackingScriptGenerator } from "./TrackingScriptGenerator";
+import { ScreenRecordingToggle } from "./ScreenRecordingToggle";
 import {
   Dialog,
   DialogContent,
@@ -179,12 +180,18 @@ export const CampaignsList = () => {
                 </DialogTrigger>
                 <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Tracking Script</DialogTitle>
+                    <DialogTitle>Tracking Script & Recording</DialogTitle>
                   </DialogHeader>
-                  <TrackingScriptGenerator 
-                    campaignId={campaign.id} 
-                    campaignName={campaign.name} 
-                  />
+                  <div className="space-y-6">
+                    <ScreenRecordingToggle 
+                      campaignId={campaign.id} 
+                      campaignName={campaign.name} 
+                    />
+                    <TrackingScriptGenerator 
+                      campaignId={campaign.id} 
+                      campaignName={campaign.name} 
+                    />
+                  </div>
                 </DialogContent>
               </Dialog>
               <Button

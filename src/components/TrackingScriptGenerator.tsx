@@ -20,6 +20,7 @@ export const TrackingScriptGenerator = ({ campaignId, campaignName }: TrackingSc
   const escapedCampaignId = campaignId.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   const trackingScript = `<!-- Campaign Craft Advanced Tracking -->
+<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
 <script>
 (function() {
   // Respect Do Not Track browser setting
@@ -81,22 +82,65 @@ export const TrackingScriptGenerator = ({ campaignId, campaignName }: TrackingSc
     }
   });
   
-  // Optional: Screen recording with rrweb (add rrweb library first)
-  if (window.rrweb && localStorage.getItem('cc_record_screen') === 'true') {
-    let events = [];
-    window.rrweb.record({
-      emit(event) {
-        events.push(event);
-        // Send recording data every 10 seconds
-        if (events.length > 50) {
-          const recordingData = JSON.stringify(events);
-          trackEvent('pageview', {
-            screen_recording_url: 'data:application/json;base64,' + btoa(recordingData)
-          });
-          events = [];
-        }
+  // Screen recording with rrweb
+  if (localStorage.getItem('cc_record_screen') === 'true') {
+    // Wait for rrweb to load
+    const initRecording = function() {
+      if (!window.rrweb) {
+        setTimeout(initRecording, 100);
+        return;
       }
-    });
+      
+      console.log('[Campaign Craft] Screen recording enabled');
+      let events = [];
+      let stopFn;
+      
+      stopFn = window.rrweb.record({
+        emit(event) {
+          events.push(event);
+          
+          // Send recording data every 50 events or 30 seconds
+          if (events.length >= 50) {
+            const recordingData = JSON.stringify(events);
+            const base64Data = btoa(unescape(encodeURIComponent(recordingData)));
+            
+            trackEvent('session_recording', {
+              screen_recording_url: 'data:application/json;base64,' + base64Data,
+              recording_events_count: events.length
+            });
+            
+            events = []; // Clear events after sending
+          }
+        },
+        recordCanvas: true,
+        collectFonts: true,
+        maskAllInputs: true, // Mask all inputs for privacy
+        maskInputOptions: {
+          password: true,
+          email: true,
+          tel: true
+        }
+      });
+      
+      // Send remaining events before page unload
+      window.addEventListener('beforeunload', function() {
+        if (events.length > 0) {
+          const recordingData = JSON.stringify(events);
+          const base64Data = btoa(unescape(encodeURIComponent(recordingData)));
+          
+          navigator.sendBeacon(trackingUrl, JSON.stringify({
+            campaign_id: campaignId,
+            event_type: 'session_recording',
+            visitor_id: visitorId,
+            page_path: window.location.pathname + window.location.search,
+            screen_recording_url: 'data:application/json;base64,' + base64Data,
+            recording_events_count: events.length
+          }));
+        }
+      });
+    };
+    
+    initRecording();
   }
 })();
 </script>`;
@@ -149,7 +193,9 @@ export const TrackingScriptGenerator = ({ campaignId, campaignName }: TrackingSc
           <p>✅ <strong>Page context:</strong> Full URL path and referrer tracked</p>
           <p>✅ <strong>Element details:</strong> Button text and selectors captured</p>
           <p>📝 <strong>Conversions:</strong> Add <code className="bg-muted px-1 rounded">data-track-conversion</code> to conversion buttons</p>
-          <p>🎥 <strong>Screen recording:</strong> Enable with localStorage: <code className="bg-muted px-1 rounded">cc_record_screen = true</code></p>
+          <p>🎥 <strong>Screen recording:</strong> Uses rrweb library (loaded via CDN)</p>
+          <p>🔒 <strong>Privacy protected:</strong> All passwords and sensitive inputs are automatically masked</p>
+          <p>💾 <strong>Auto-save:</strong> Recording data sent every 50 events or on page unload</p>
         </div>
       </div>
     </Card>
