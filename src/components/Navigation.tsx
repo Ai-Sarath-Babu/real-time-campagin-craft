@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, Link } from "react-router-dom";
-import { BarChart3, LogOut, TestTube, Shield } from "lucide-react";
+import { BarChart3, LogOut, TestTube, Shield, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const Navigation = () => {
@@ -31,6 +31,12 @@ export const Navigation = () => {
               <Link to="/privacy" className="gap-2">
                 <Shield className="w-4 h-4" />
                 Privacy
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/screen-recorder" className="gap-2">
+                <Video className="w-4 h-4" />
+                Screen Recorder
               </Link>
             </Button>
             <Button 
