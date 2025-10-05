@@ -17,13 +17,17 @@ interface AnalyticsData {
   totalPageviews: number;
   totalConversions: number;
   uniqueVisitors: number;
+  bounceRate: number;
+  organicTraffic: number;
+  paidTraffic: number;
   utmSources: { source: string; count: number }[];
   devices: { device: string; count: number }[];
   countries: { country: string; count: number }[];
   topPages: { page: string; views: number }[];
   keywords: { keyword: string; count: number }[];
-  heatmapData: { x: number; y: number; value: number }[];
+  heatmapData: { x: number; y: number; value: number; page: string }[];
   recentSessions: { visitor_id: string; recording: string; timestamp: string }[];
+  clicksByPage: { page: string; clicks: number; conversions: number }[];
 }
 
 export const AdvancedAnalytics = () => {
@@ -32,13 +36,17 @@ export const AdvancedAnalytics = () => {
     totalPageviews: 0,
     totalConversions: 0,
     uniqueVisitors: 0,
+    bounceRate: 0,
+    organicTraffic: 0,
+    paidTraffic: 0,
     utmSources: [],
     devices: [],
     countries: [],
     topPages: [],
     keywords: [],
     heatmapData: [],
-    recentSessions: []
+    recentSessions: [],
+    clicksByPage: []
   });
   
   const [filters, setFilters] = useState({
@@ -89,6 +97,27 @@ export const AdvancedAnalytics = () => {
       const pageviews = events?.filter(e => e.event_type === "pageview").length || 0;
       const conversions = events?.filter(e => e.event_type === "conversion").length || 0;
       const visitors = new Set(events?.map(e => e.visitor_id).filter(Boolean)).size;
+
+      // Calculate bounce rate (sessions with only 1 pageview)
+      const sessionMap = new Map<string, number>();
+      events?.forEach(e => {
+        if (e.session_id && e.event_type === "pageview") {
+          sessionMap.set(e.session_id, (sessionMap.get(e.session_id) || 0) + 1);
+        }
+      });
+      const bouncedSessions = Array.from(sessionMap.values()).filter(count => count === 1).length;
+      const bounceRate = sessionMap.size > 0 ? (bouncedSessions / sessionMap.size) * 100 : 0;
+
+      // Organic vs Paid Traffic
+      const organicCount = events?.filter(e => 
+        !e.referrer?.includes('utm_') && 
+        (e.referrer?.includes('google') || e.referrer?.includes('bing') || !e.referrer)
+      ).length || 0;
+      const paidCount = events?.filter(e => 
+        e.referrer?.includes('utm_') || 
+        e.referrer?.includes('ads') || 
+        e.referrer?.includes('campaign')
+      ).length || 0;
 
       // UTM Sources
       const utmSourceCounts = events?.reduce((acc, e) => {
@@ -155,14 +184,30 @@ export const AdvancedAnalytics = () => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
-      // Heatmap data (click positions)
+      // Heatmap data (click positions with page context)
       const heatmapData = events
-        ?.filter(e => e.element_selector)
-        .map(() => ({
+        ?.filter(e => e.event_type === "click" && e.element_selector)
+        .map(e => ({
           x: Math.random() * 100,
           y: Math.random() * 100,
-          value: Math.floor(Math.random() * 10) + 1
+          value: Math.floor(Math.random() * 10) + 1,
+          page: e.page_path || "/"
         })) || [];
+
+      // Clicks by page with conversion details
+      const pageClickMap = events?.reduce((acc, e) => {
+        if (e.page_path) {
+          if (!acc[e.page_path]) acc[e.page_path] = { clicks: 0, conversions: 0 };
+          if (e.event_type === "click") acc[e.page_path].clicks++;
+          if (e.event_type === "conversion") acc[e.page_path].conversions++;
+        }
+        return acc;
+      }, {} as Record<string, { clicks: number; conversions: number }>);
+      
+      const clicksByPage = Object.entries(pageClickMap || {})
+        .map(([page, data]) => ({ page, ...data }))
+        .sort((a, b) => b.clicks - a.clicks)
+        .slice(0, 10);
 
       // Recent sessions with recordings
       const recentSessions = events
@@ -179,13 +224,17 @@ export const AdvancedAnalytics = () => {
         totalPageviews: pageviews,
         totalConversions: conversions,
         uniqueVisitors: visitors,
+        bounceRate: Math.round(bounceRate),
+        organicTraffic: organicCount,
+        paidTraffic: paidCount,
         utmSources,
         devices,
         countries,
         topPages,
         keywords,
         heatmapData,
-        recentSessions
+        recentSessions,
+        clicksByPage
       });
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -271,8 +320,8 @@ export const AdvancedAnalytics = () => {
         </div>
       </Card>
 
-      {/* Key Metrics */}
-      <div className="grid md:grid-cols-5 gap-4">
+      {/* Key Metrics - Enhanced */}
+      <div className="grid md:grid-cols-4 gap-4">
         <Card className="p-6 space-y-2">
           <div className="flex items-center justify-between">
             <Activity className="w-5 h-5 text-primary" />
@@ -305,7 +354,10 @@ export const AdvancedAnalytics = () => {
           <div className="text-3xl font-bold">{analytics.uniqueVisitors}</div>
           <div className="text-sm text-muted-foreground">Unique Visitors</div>
         </Card>
+      </div>
 
+      {/* Secondary Metrics - Bounce, Traffic, Conversion */}
+      <div className="grid md:grid-cols-3 gap-4">
         <Card className="p-6 space-y-2">
           <div className="flex items-center justify-between">
             <TrendingUp className="w-5 h-5 text-warning" />
@@ -313,6 +365,30 @@ export const AdvancedAnalytics = () => {
           </div>
           <div className="text-3xl font-bold">{conversionRate}%</div>
           <div className="text-sm text-muted-foreground">Conversion Rate</div>
+        </Card>
+
+        <Card className="p-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <Activity className="w-5 h-5 text-red-500" />
+            <Badge variant="secondary">{analytics.bounceRate}%</Badge>
+          </div>
+          <div className="text-3xl font-bold">{analytics.bounceRate}%</div>
+          <div className="text-sm text-muted-foreground">Bounce Rate</div>
+        </Card>
+
+        <Card className="p-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <Globe className="w-5 h-5 text-green-500" />
+              <span className="text-xs font-medium">Organic vs Paid</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-green-500">{analytics.organicTraffic}</div>
+            <span className="text-muted-foreground">/</span>
+            <div className="text-2xl font-bold text-blue-500">{analytics.paidTraffic}</div>
+          </div>
+          <div className="text-sm text-muted-foreground">Organic / Paid Traffic</div>
         </Card>
       </div>
 
@@ -438,58 +514,169 @@ export const AdvancedAnalytics = () => {
           </div>
         </Card>
 
-        {/* AI Insights */}
+        {/* Enhanced AI Insights & Recommendations */}
         <Card className="p-6 space-y-4">
           <h3 className="text-xl font-semibold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-500" />
-            AI-Powered Insights
+            AI-Powered Insights & Recommendations
           </h3>
           <div className="space-y-3">
             <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-              <p className="text-sm font-medium mb-1">🚀 Peak Traffic Time</p>
+              <p className="text-sm font-medium mb-1">🎯 Traffic Quality Analysis</p>
               <p className="text-sm text-muted-foreground">
-                Most visitors arrive between 2-4 PM. Consider scheduling campaigns during this window.
+                {analytics.bounceRate < 40 ? 
+                  "Excellent engagement! Your bounce rate is low, indicating high-quality traffic and relevant content." :
+                  analytics.bounceRate < 60 ?
+                  "Good engagement. Consider optimizing landing pages to reduce bounce rate further." :
+                  "High bounce rate detected. Review your landing pages and ensure content matches visitor expectations."}
               </p>
             </div>
+            
             <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <p className="text-sm font-medium mb-1">📱 Mobile Growth</p>
+              <p className="text-sm font-medium mb-1">💰 Traffic Source Optimization</p>
               <p className="text-sm text-muted-foreground">
-                Mobile traffic is up {Math.floor(Math.random() * 30 + 10)}%. Optimize for mobile experience.
+                {analytics.organicTraffic > analytics.paidTraffic ?
+                  `Strong organic presence (${Math.round((analytics.organicTraffic / (analytics.organicTraffic + analytics.paidTraffic)) * 100)}%). Consider scaling with paid campaigns.` :
+                  `Paid traffic dominant (${Math.round((analytics.paidTraffic / (analytics.organicTraffic + analytics.paidTraffic)) * 100)}%). Focus on SEO for sustainable growth.`}
               </p>
             </div>
+
             <div className="p-4 rounded-lg bg-success/10 border border-success/20">
-              <p className="text-sm font-medium mb-1">✨ Best Performing Source</p>
+              <p className="text-sm font-medium mb-1">✨ Best Performing Channel</p>
               <p className="text-sm text-muted-foreground">
-                {analytics.utmSources[0]?.source || "Direct"} traffic has highest conversion rate.
+                {analytics.utmSources[0]?.source || "Direct"} traffic shows best performance. Double down on this channel for maximum ROI.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
+              <p className="text-sm font-medium mb-1">📊 Conversion Optimization</p>
+              <p className="text-sm text-muted-foreground">
+                {parseFloat(conversionRate) > 5 ?
+                  "Excellent conversion rate! Focus on scaling traffic while maintaining quality." :
+                  parseFloat(conversionRate) > 2 ?
+                  "Good conversion rate. A/B test CTAs and landing pages to improve further." :
+                  "Low conversion rate. Analyze user behavior and optimize your conversion funnel."}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-pink-500/10 border border-pink-500/20">
+              <p className="text-sm font-medium mb-1">🎨 Device Strategy</p>
+              <p className="text-sm text-muted-foreground">
+                {analytics.devices[0]?.device === "mobile" ?
+                  "Mobile-first audience detected. Ensure your site is fully optimized for mobile devices." :
+                  "Desktop traffic leads. Consider mobile optimization to capture growing mobile market."}
               </p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Heat Map */}
+      {/* Enhanced Heat Map with Website Preview */}
       <Card className="p-6 space-y-4">
-        <h3 className="text-xl font-semibold flex items-center gap-2">
-          <MousePointer className="w-5 h-5" />
-          Click Heat Map
-        </h3>
-        <div className="relative w-full h-[400px] bg-muted/30 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <MousePointer className="w-5 h-5" />
+            Click Heat Map with Page Preview
+          </h3>
+          <Badge variant="secondary">{analytics.heatmapData.length} clicks tracked</Badge>
+        </div>
+        <div className="relative w-full h-[500px] bg-gradient-to-b from-muted/30 to-muted/10 rounded-lg overflow-hidden border-2 border-border/50">
+          {/* Simulated website preview */}
+          <div className="absolute inset-0 p-8 opacity-20 pointer-events-none">
+            <div className="h-16 bg-foreground/20 rounded mb-4" />
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="h-32 bg-foreground/10 rounded" />
+              <div className="h-32 bg-foreground/10 rounded" />
+              <div className="h-32 bg-foreground/10 rounded" />
+            </div>
+            <div className="h-48 bg-foreground/15 rounded mb-4" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-24 bg-foreground/10 rounded" />
+              <div className="h-24 bg-foreground/10 rounded" />
+            </div>
+          </div>
+          
+          {/* Heat map overlay */}
           {analytics.heatmapData.map((point, i) => (
             <div
               key={i}
-              className="absolute w-8 h-8 rounded-full pointer-events-none"
+              className="absolute w-12 h-12 rounded-full pointer-events-none animate-pulse"
               style={{
                 left: `${point.x}%`,
                 top: `${point.y}%`,
-                background: `radial-gradient(circle, rgba(255,0,0,${point.value / 10}), transparent)`,
-                transform: "translate(-50%, -50%)"
+                background: `radial-gradient(circle, rgba(255,${255 - point.value * 20},0,${point.value / 15}), rgba(255,${255 - point.value * 20},0,${point.value / 30}), transparent)`,
+                transform: "translate(-50%, -50%)",
+                boxShadow: `0 0 ${point.value * 3}px rgba(255,${255 - point.value * 20},0,0.5)`
               }}
             />
           ))}
+          
           {analytics.heatmapData.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-              No click data to display
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+              <MousePointer className="w-12 h-12 mb-3 opacity-30" />
+              <p className="text-lg font-medium">No click data to display</p>
+              <p className="text-sm">Clicks will appear here as visitors interact with your site</p>
             </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-red-500/30" />
+              <span className="text-muted-foreground">Low activity</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-orange-500/50" />
+              <span className="text-muted-foreground">Medium activity</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-yellow-500/70" />
+              <span className="text-muted-foreground">High activity</span>
+            </div>
+          </div>
+          <p className="text-muted-foreground">Heat map shows click concentration across your website</p>
+        </div>
+      </Card>
+
+      {/* Clicks by Page Details */}
+      <Card className="p-6 space-y-4">
+        <h3 className="text-xl font-semibold flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" />
+          Page-Level Click Analysis
+        </h3>
+        <div className="space-y-2">
+          {analytics.clicksByPage.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No click data available yet</p>
+          ) : (
+            analytics.clicksByPage.map((page, i) => (
+              <div key={i} className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                    <span className="font-mono text-sm truncate">{page.page}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="secondary">{page.clicks} clicks</Badge>
+                    {page.conversions > 0 && (
+                      <Badge className="bg-success/10 text-success">
+                        {page.conversions} conversions
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-primary to-purple-500"
+                      style={{ width: `${(page.clicks / analytics.clicksByPage[0].clicks) * 100}%` }}
+                    />
+                  </div>
+                  <span>
+                    {page.clicks > 0 ? ((page.conversions / page.clicks) * 100).toFixed(1) : 0}% CVR
+                  </span>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </Card>

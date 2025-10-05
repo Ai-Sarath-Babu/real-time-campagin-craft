@@ -6,6 +6,7 @@ import { Navigation } from "@/components/Navigation";
 import { CampaignsList } from "@/components/CampaignsList";
 import { LiveDashboardData } from "@/components/LiveDashboardData";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
+import { UserBehaviorAnalysis } from "@/components/UserBehaviorAnalysis";
 import { UtmBuilderForm } from "@/components/UtmBuilderForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -62,11 +63,12 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="builder" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-3xl mx-auto">
+          <TabsList className="grid w-full grid-cols-5 max-w-4xl mx-auto">
             <TabsTrigger value="builder">UTM Builder</TabsTrigger>
-            <TabsTrigger value="campaigns">My Campaigns</TabsTrigger>
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
             <TabsTrigger value="advanced">Advanced Analytics</TabsTrigger>
+            <TabsTrigger value="behavior">User Behavior</TabsTrigger>
           </TabsList>
 
           <TabsContent value="builder">
@@ -83,6 +85,10 @@ const Dashboard = () => {
 
           <TabsContent value="advanced">
             <AdvancedAnalytics />
+          </TabsContent>
+
+          <TabsContent value="behavior">
+            <UserBehaviorAnalysis />
           </TabsContent>
         </Tabs>
       </main>
