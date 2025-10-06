@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Navigation } from "@/components/Navigation";
@@ -8,7 +8,8 @@ import { LiveDashboardData } from "@/components/LiveDashboardData";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { UserBehaviorAnalysis } from "@/components/UserBehaviorAnalysis";
 import { UtmBuilderForm } from "@/components/UtmBuilderForm";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -58,41 +59,26 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="builder" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 max-w-4xl mx-auto">
-            <TabsTrigger value="builder">UTM Builder</TabsTrigger>
-            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-            <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced Analytics</TabsTrigger>
-            <TabsTrigger value="behavior">User Behavior</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="builder">
-            <UtmBuilderForm />
-          </TabsContent>
-
-          <TabsContent value="campaigns">
-            <CampaignsList />
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <LiveDashboardData />
-          </TabsContent>
-
-          <TabsContent value="advanced">
-            <AdvancedAnalytics />
-          </TabsContent>
-
-          <TabsContent value="behavior">
-            <UserBehaviorAnalysis />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        
+        <div className="flex-1 flex flex-col">
+          <Navigation />
+          
+          <main className="flex-1 p-6 overflow-auto">
+            <Routes>
+              <Route index element={<Navigate to="/dashboard/builder" replace />} />
+              <Route path="builder" element={<UtmBuilderForm />} />
+              <Route path="campaigns" element={<CampaignsList />} />
+              <Route path="analytics" element={<LiveDashboardData />} />
+              <Route path="advanced" element={<AdvancedAnalytics />} />
+              <Route path="behavior" element={<UserBehaviorAnalysis />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
