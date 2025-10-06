@@ -62,7 +62,11 @@ export const AdvancedAnalytics = () => {
 
   useEffect(() => {
     fetchAnalytics();
-    subscribeToRealtime();
+    const channel = subscribeToRealtime();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [filters]);
 
   const fetchAnalytics = async () => {
@@ -259,9 +263,7 @@ export const AdvancedAnalytics = () => {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return channel;
   };
 
   const conversionRate = analytics.totalClicks > 0 

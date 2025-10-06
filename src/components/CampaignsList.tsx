@@ -39,6 +39,26 @@ export const CampaignsList = () => {
 
   useEffect(() => {
     fetchCampaigns();
+    
+    // Real-time updates for campaigns
+    const channel = supabase
+      .channel('campaigns-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'campaigns'
+        },
+        () => {
+          fetchCampaigns();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchCampaigns = async () => {

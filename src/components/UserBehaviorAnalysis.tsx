@@ -32,6 +32,26 @@ export const UserBehaviorAnalysis = () => {
 
   useEffect(() => {
     fetchUserProfiles();
+    
+    // Real-time updates
+    const channel = supabase
+      .channel('user-behavior-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tracking_events'
+        },
+        () => {
+          fetchUserProfiles();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchUserProfiles = async () => {
