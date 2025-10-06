@@ -19,6 +19,7 @@ interface Campaign {
   id: string;
   name: string;
   url: string;
+  domain: string;
   utm_source: string;
   utm_medium: string;
   utm_campaign: string;
@@ -32,6 +33,8 @@ interface Campaign {
 export const CampaignsList = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDomain, setSelectedDomain] = useState<string>("all");
+  const [domains, setDomains] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,6 +50,10 @@ export const CampaignsList = () => {
 
       if (error) throw error;
       setCampaigns(data || []);
+      
+      // Extract unique domains
+      const uniqueDomains = Array.from(new Set(data?.map(c => c.domain) || []));
+      setDomains(uniqueDomains);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -117,19 +124,40 @@ export const CampaignsList = () => {
     );
   }
 
+  const filteredCampaigns = selectedDomain === "all" 
+    ? campaigns 
+    : campaigns.filter(c => c.domain === selectedDomain);
+
   return (
     <div className="space-y-4 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-bold">My Campaigns</h2>
-        <Badge variant="secondary">{campaigns.length} campaigns</Badge>
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedDomain}
+            onChange={(e) => setSelectedDomain(e.target.value)}
+            className="px-4 py-2 border rounded-md bg-background"
+          >
+            <option value="all">All Domains ({campaigns.length})</option>
+            {domains.map(domain => (
+              <option key={domain} value={domain}>
+                {domain} ({campaigns.filter(c => c.domain === domain).length})
+              </option>
+            ))}
+          </select>
+          <Badge variant="secondary">{filteredCampaigns.length} campaigns</Badge>
+        </div>
       </div>
 
       <div className="grid gap-4">
-        {campaigns.map((campaign) => (
+        {filteredCampaigns.map((campaign) => (
           <Card key={campaign.id} className="p-6 space-y-4 border-border/50 bg-card/80">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold">{campaign.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{campaign.name}</h3>
+                  <Badge variant="outline" className="text-xs">{campaign.domain}</Badge>
+                </div>
                 <p className="text-sm text-muted-foreground">{campaign.url}</p>
               </div>
               <Badge variant={campaign.is_active ? "default" : "secondary"}>

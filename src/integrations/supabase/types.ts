@@ -59,6 +59,7 @@ export type Database = {
         Row: {
           created_at: string
           custom_params: Json | null
+          domain: string
           id: string
           is_active: boolean | null
           name: string
@@ -75,6 +76,7 @@ export type Database = {
         Insert: {
           created_at?: string
           custom_params?: Json | null
+          domain?: string
           id?: string
           is_active?: boolean | null
           name: string
@@ -91,6 +93,7 @@ export type Database = {
         Update: {
           created_at?: string
           custom_params?: Json | null
+          domain?: string
           id?: string
           is_active?: boolean | null
           name?: string

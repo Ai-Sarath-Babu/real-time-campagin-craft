@@ -9,6 +9,11 @@ export const campaignSchema = z.object({
     .trim()
     .url("Invalid URL format")
     .max(2048, "URL too long"),
+  domain: z.string()
+    .trim()
+    .min(1, "Domain is required")
+    .max(255, "Domain too long")
+    .regex(/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/, "Invalid domain format"),
   utm_source: z.string()
     .trim()
     .min(1, "Source is required")

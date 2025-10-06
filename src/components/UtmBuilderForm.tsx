@@ -16,6 +16,7 @@ export const UtmBuilderForm = () => {
   const [formData, setFormData] = useState({
     name: "",
     url: "https://example.com",
+    domain: "example.com",
     source: "google",
     medium: "cpc",
     campaign: "summer_sale_2024",
@@ -66,6 +67,7 @@ export const UtmBuilderForm = () => {
       const validated = campaignSchema.parse({
         name: formData.name || `${formData.source} - ${formData.campaign}`,
         url: formData.url,
+        domain: formData.domain,
         utm_source: formData.source,
         utm_medium: formData.medium,
         utm_campaign: formData.campaign,
@@ -79,6 +81,7 @@ export const UtmBuilderForm = () => {
         user_id: user.id,
         name: validated.name,
         url: validated.url,
+        domain: validated.domain,
         utm_source: validated.utm_source,
         utm_medium: validated.utm_medium,
         utm_campaign: validated.utm_campaign,
@@ -99,6 +102,7 @@ export const UtmBuilderForm = () => {
       setFormData({
         name: "",
         url: "https://example.com",
+        domain: "example.com",
         source: "",
         medium: "",
         campaign: "",
@@ -151,6 +155,19 @@ export const UtmBuilderForm = () => {
           className="h-12"
           required
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="domain" className="text-base font-semibold">Domain *</Label>
+        <Input
+          id="domain"
+          value={formData.domain}
+          onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+          placeholder="example.com"
+          className="h-12"
+          required
+        />
+        <p className="text-xs text-muted-foreground">Each domain has separate campaigns and tracking</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 pt-4">
@@ -251,7 +268,7 @@ export const UtmBuilderForm = () => {
           onClick={handleSave} 
           size="lg" 
           className="gap-2 gradient-primary text-white"
-          disabled={saving || !formData.source || !formData.medium || !formData.campaign}
+          disabled={saving || !formData.source || !formData.medium || !formData.campaign || !formData.domain}
         >
           <Save className="w-4 h-4" />
           {saving ? "Saving..." : "Save Campaign"}
