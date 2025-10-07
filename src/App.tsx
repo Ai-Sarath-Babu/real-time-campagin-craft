@@ -8,7 +8,6 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import TestTracking from "./pages/TestTracking";
 import Privacy from "./pages/Privacy";
-import ScreenRecorder from "./pages/ScreenRecorder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,7 +24,6 @@ const App = () => (
           <Route path="/dashboard/*" element={<Dashboard />} />
           <Route path="/test-tracking" element={<TestTracking />} />
           <Route path="/privacy" element={<Privacy />} />
-          <Route path="/screen-recorder" element={<ScreenRecorder />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
